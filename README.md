@@ -106,46 +106,6 @@ python evaluation/visualize.py --log-dir logs/run_001/
 ./build/play --checkpoint checkpoints/best_model.pt --render
 ```
 
-## 📊 Performance Targets
-
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Training Speed | >1M steps/sec | 1024 parallel environments |
-| Expert Level Score | >100,000 | Average over 100 episodes |
-| Lines Cleared | >500 | Per game average |
-| GPU Utilization | >85% | During training |
-| Memory Usage | <8GB VRAM | On single RTX 3080 |
-
-## 🔬 Technical Deep Dive
-
-### PPO Algorithm Implementation
-
-The PPO implementation uses:
-- **Clipped surrogate objective** for stable policy updates
-- **Generalized Advantage Estimation (GAE)** for variance reduction
-- **Value function clipping** for critic stability
-- **Entropy bonus** for exploration
-
-### Neural Network Architecture
-
-**Policy Network:**
-- Input: 200-dim state vector (board + piece info)
-- Hidden: [256, 256, 128]
-- Output: 7 actions (move left/right, rotate, drop, etc.)
-
-**Value Network:**
-- Input: 200-dim state vector
-- Hidden: [256, 256, 128]
-- Output: Single value estimate
-
-### CUDA Optimizations
-
-1. **Fused Kernels**: Combined operations (e.g., linear + ReLU) in single kernel
-2. **Shared Memory**: Utilize fast shared memory for reduction operations
-3. **Coalesced Access**: Optimized memory access patterns
-4. **Async Execution**: Overlapping compute and memory transfers
-5. **Multi-GPU** (stretch): Data parallelism across GPUs
-
 ## 📈 Roadmap
 
 - [x] Project structure and dummy files
@@ -168,15 +128,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 MIT License - see LICENSE file for details
 
-## 🙏 Acknowledgments
-
-- PPO paper: [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
-- GAE paper: [High-Dimensional Continuous Control Using Generalized Advantage Estimation](https://arxiv.org/abs/1506.02438)
-- Tetris AI research and game mechanics
-
 ## 📧 Contact
 
-Questions? Open an issue or reach out to [your-email@example.com]
+Questions? Open an issue or reach out to [laithaustin@utexas.edu]
 
 ---
 
