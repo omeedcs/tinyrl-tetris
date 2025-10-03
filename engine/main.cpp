@@ -31,10 +31,11 @@ private:
     void lockPiece();
     int clearLines();
 
-    std::vector<std::vector<uint8_t> > board;
-    std::vector<std::vector<uint8_t> > active_tetromino;
-    std::vector<std::vector<uint8_t> > holder;
-    std::vector<std::vector<uint8_t> > queue;
+    std::vector<std::vector<uint8_t>> board;
+    std::vector<std::vector<uint8_t>> active_tetromino;
+    std::vector<std::vector<uint8_t>> holder;
+    std::vector<std::vector<uint8_t>> queue;
+    
     int score;
     bool game_over;
     TimeManager tm;
