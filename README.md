@@ -4,7 +4,7 @@ A from-scratch reinforcement learning training system with custom CUDA kernels t
 
 ## 🎯 Project Overview
 
-TinyRL-Tetris is a high-performance RL training framework built entirely from scratch using C++, CUDA, and Python (for visualization only). The goal is to train an AI agent to play Tetris at expert level without relying on existing ML frameworks like PyTorch, TensorFlow, or JAX.
+TinyRL-Tetris is a high-performance RL training framework built entirely from scratch using C++, CUDA, and Python (for visualization only). The goal is to train an AI agent to play Tetris at expert level without relying too much on existing ML frameworks like PyTorch, TensorFlow, or JAX.
 
 ### Key Features
 
