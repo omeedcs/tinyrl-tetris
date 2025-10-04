@@ -10,7 +10,7 @@ enum Action : uint8_t {
 struct Observation {
     static constexpr int BoardW = 18;
     static constexpr int BoardH = 24;
-
+    
     std::vector<std::vector<uint8_t>> board; // 0-9 representing all forms of tetrominoes
     std::vector<std::vector<uint8_t>> active_tetromino; // 0,1 mask for where the piece is
     std::vector<std::vector<uint8_t>> holder;
@@ -38,7 +38,7 @@ public:
     void applyAction(uint8_t action);
     void loop();
 
-private:
+    // Made public for testing - consider friend class for production
     void spawnPiece();
     bool checkCollision();
     void lockPiece();
