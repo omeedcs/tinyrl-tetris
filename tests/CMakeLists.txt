@@ -30,6 +30,7 @@ set(ENGINE_SOURCES
 # Test executable
 add_executable(tetris_tests
     engine/test_tetris_game.cpp
+    engine/test_edge_cases.cpp
     ${ENGINE_SOURCES}
 )
 
