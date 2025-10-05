@@ -91,8 +91,7 @@ uint8_t TetrisGame::getNextPiece() {
     uint8_t next_piece = queue[queue_index];
     queue[queue_index] = rand() % 7;
     queue_index = (queue_index + 1) % queue_size;
-    // For now, return random piece (0-6)
-    return rand() % 7;
+    return next_piece;
 }
 
 uint8_t TetrisGame::setLastPiece(uint8_t val) {

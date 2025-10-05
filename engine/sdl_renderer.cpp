@@ -239,10 +239,11 @@ namespace SDLRenderer {
             drawText(scoreText, 500, 80);
         }
         
-        // Draw next piece
+        // Draw next piece (only first piece from queue - first 4 rows)
         int nextX = 500;
         int nextY = 150;
-        drawPreviewPiece(obs.queue, nextX, nextY, "NEXT:");
+        std::vector<std::vector<uint8_t>> nextPiece(obs.queue.begin(), obs.queue.begin() + 4);
+        drawPreviewPiece(nextPiece, nextX, nextY, "NEXT:");
         
         // Draw hold piece
         int holdX = 500;
