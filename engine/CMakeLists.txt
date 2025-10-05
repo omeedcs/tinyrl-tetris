@@ -17,6 +17,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
+# find pybind11
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../extern/pybind11 ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
+
 # Common source files (without loop dependencies)
 set(COMMON_SOURCES
     timeManager.cpp
@@ -54,15 +57,28 @@ target_link_libraries(tetris_sdl
     SDL2_ttf::SDL2_ttf
 )
 
-# Terminal version (legacy)
-add_executable(tetris_terminal
-    main.cpp
-    renderer.cpp
-    input.cpp
+# Terminal version (legacy) - disabled, needs loop() function
+# add_executable(tetris_terminal
+#     main.cpp
+#     renderer.cpp
+#     input.cpp
+#     ${COMMON_SOURCES}
+# )
+#
+# target_include_directories(tetris_terminal PRIVATE
+#     ${CMAKE_CURRENT_SOURCE_DIR}
+#     ${CMAKE_CURRENT_SOURCE_DIR}/include
+# )
+
+# Python bindings
+pybind11_add_module(tinyrl_tetris
+    bindings.cpp
+    tetrisGame.cpp
     ${COMMON_SOURCES}
 )
 
-target_include_directories(tetris_terminal PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+target_compile_definitions(tinyrl_tetris PRIVATE NO_TERMINAL_LOOP)
+
+target_include_directories(tinyrl_tetris PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
