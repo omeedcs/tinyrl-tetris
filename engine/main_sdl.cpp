@@ -31,14 +31,19 @@ int main() {
             game.updateObservation();
         }
         
+        // Apply soft drop immediately if pressed
+        bool soft_drop_pressed = (action == Action::DOWN);
+        
         // Apply gravity/down movement on tick
         while (accumulate >= Tetris::TICK_RATE) {
-            // Apply DOWN if user pressed it, otherwise just gravity
-            if (action == Action::DOWN) {
-                game.step(static_cast<int>(action));
+            // Apply DOWN if user pressed it this frame, otherwise just gravity
+            if (soft_drop_pressed) {
+                game.step(static_cast<int>(Action::DOWN));
+                soft_drop_pressed = false;  // Only apply once per press
             } else {
                 game.updateGameState();  // Just gravity, no user action
             }
+            game.updateObservation();  // Update visual after gravity
             accumulate -= Tetris::TICK_RATE;
         }
         
