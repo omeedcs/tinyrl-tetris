@@ -16,6 +16,12 @@ TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size)
     obs.holder.resize(Tetris::PIECE_SIZE, std::vector<uint8_t>(Tetris::PIECE_SIZE, 0));
     obs.queue.resize(queue_size * Tetris::PIECE_SIZE, std::vector<uint8_t>(Tetris::PIECE_SIZE, 0));
 
+    // Initialize queue with random pieces
+    queue.resize(queue_size);
+    for (int i = 0; i < queue_size; i++) {
+        queue[i] = rand() % 7;
+    }
+
     // update current piece data
     rotation = 0;
     queue_index = 0;
@@ -194,11 +200,24 @@ float TetrisGame::getReward() {
 bool TetrisGame::checkCollision() {
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
         for (int x = 0; x < Tetris::PIECE_SIZE; x++) {
-            if (Tetris::PIECES[current_piece_type][rotation][y][x] && obs.board[current_y + y][current_x + x]) {
-                 return true;
+            if (Tetris::PIECES[current_piece_type][rotation][y][x]) {
+                int board_x = current_x + x;
+                int board_y = current_y + y;
+                
+                // Check boundaries (board has extra rows at top for spawning)
+                if (board_x < 0 || board_x >= Observation::BoardW ||
+                    board_y < 0 || board_y >= Observation::BoardH) {
+                    return true;
+                }
+                
+                // Check collision with existing pieces
+                if (obs.board[board_y][board_x]) {
+                    return true;
+                }
             }
         }
     }
+    return false;
 }
 
 void TetrisGame::spawnPiece() {
@@ -210,11 +229,11 @@ void TetrisGame::spawnPiece() {
 }
 
 void TetrisGame::lockPiece() {
-    // lock piece
+    // lock piece (store piece_type + 1 so 0 remains empty)
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
         for (int x = 0; x < Tetris::PIECE_SIZE; x++) {
             if (Tetris::PIECES[current_piece_type][rotation][y][x]) {
-                obs.board[current_y + y][current_x + x] = current_piece_type;
+                obs.board[current_y + y][current_x + x] = current_piece_type + 1;
             }
         }
     }
@@ -232,13 +251,22 @@ int TetrisGame::clearLine(uint8_t row) {
 
 int TetrisGame::clearLines() {
     int scored = 0;
+    // Check rows where the current piece was placed
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
+        int row = current_y + y;
+        if (row < 0 || row >= Tetris::BOARD_HEIGHT) continue;
+        
+        // Check if this row is full
+        bool is_full = true;
         for (int x = 0; x < Tetris::BOARD_WIDTH; x++) {
-            // find a space in the row
-            if (!obs.board[current_y + y][current_x + x]) {
+            if (obs.board[row][x] == 0) {
+                is_full = false;
                 break;
             }
-            scored += clearLine(y);
+        }
+        
+        if (is_full) {
+            scored += clearLine(row);
         }
     }
 
