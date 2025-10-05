@@ -3,8 +3,9 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-// Add QUIT action to enum
+// Add special actions to enum
 enum ActionSDL {
+    RESET = 254,
     QUIT = 255
 };
 

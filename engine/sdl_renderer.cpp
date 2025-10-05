@@ -257,7 +257,8 @@ namespace SDLRenderer {
             drawText("S - Soft Drop", 500, 480);
             drawText("SPACE - Hard Drop", 500, 505);
             drawText("C - Hold", 500, 530);
-            drawText("ESC - Quit", 500, 555);
+            drawText("R - Reset", 500, 555);
+            drawText("ESC - Quit", 500, 580);
         }
         
         // Game over overlay
@@ -276,7 +277,8 @@ namespace SDLRenderer {
                 char finalScore[64];
                 snprintf(finalScore, sizeof(finalScore), "Final Score: %d", score);
                 drawText(finalScore, 280, 320);
-                drawText("Press ESC to quit", 270, 360);
+                drawText("Press R to restart", 265, 360);
+                drawText("Press ESC to quit", 270, 390);
             }
         }
         
@@ -295,6 +297,8 @@ namespace SDLRenderer {
                     case SDLK_ESCAPE:
                     case SDLK_q:
                         return static_cast<Action>(255);  // QUIT
+                    case SDLK_r:
+                        return static_cast<Action>(254);  // RESET
                     case SDLK_a:
                     case SDLK_LEFT:
                         return Action::LEFT;

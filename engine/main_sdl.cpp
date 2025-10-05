@@ -25,6 +25,12 @@ int main() {
             break;
         }
         
+        if (action == static_cast<Action>(254)) {  // RESET
+            game.reset();
+            accumulate = 0.0;  // Reset timer
+            continue;
+        }
+        
         // Apply user input immediately (except NOOP)
         if (action != Action::NOOP) {
             game.applyAction(static_cast<uint8_t>(action));

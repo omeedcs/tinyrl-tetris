@@ -39,7 +39,45 @@ TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size)
 }
 
 void TetrisGame::reset() {
-    // TODO: Implement reset logic
+    // Clear the board
+    for (int y = 0; y < Observation::BoardH; y++) {
+        for (int x = 0; x < Observation::BoardW; x++) {
+            obs.board[y][x] = 0;
+            obs.active_tetromino[y][x] = 0;
+        }
+    }
+    
+    // Clear holder
+    for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
+        for (int x = 0; x < Tetris::PIECE_SIZE; x++) {
+            obs.holder[y][x] = 0;
+        }
+    }
+    
+    // Reset game state
+    score = 0;
+    scored = 0;
+    game_over = false;
+    holder_type = 7;
+    clearing_lines.clear();
+    
+    // Reset queue with new random pieces
+    for (int i = 0; i < queue_size; i++) {
+        queue[i] = rand() % 7;
+    }
+    queue_index = 0;
+    
+    // Spawn first piece
+    rotation = 0;
+    current_x = (Tetris::BOARD_WIDTH / 2);
+    current_y = Tetris::BOARD_HEIGHT - 1;
+    current_piece_type = getNextPiece();
+    
+    if (checkCollision()) {
+        game_over = true;
+    }
+    
+    updateObservation();
 }
 
 // get val from queue
