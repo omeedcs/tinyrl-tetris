@@ -45,6 +45,7 @@ public:
     bool checkCollision();
     void lockPiece();
     int clearLines();
+    void completeClearLines();
     int clearLine(uint8_t row);
 
     // general board state data
@@ -52,6 +53,7 @@ public:
     int scored; // points accumulated in one cycle
     bool game_over;
     int8_t queue_size;
+    std::vector<int> clearing_lines;  // Lines currently being cleared (for animation)
     TimeManager tm;
     Observation obs;
     std::vector<uint8_t> queue;

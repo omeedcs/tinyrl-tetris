@@ -11,6 +11,6 @@ enum ActionSDL {
 namespace SDLRenderer {
     bool init();
     void cleanup();
-    void render(const Observation& obs, int score = 0, bool game_over = false);
+    void render(const Observation& obs, int score = 0, bool game_over = false, const std::vector<int>& clearing_lines = {});
     Action handleInput();
 }

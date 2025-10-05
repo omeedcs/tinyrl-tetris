@@ -253,8 +253,8 @@ bool TetrisGame::checkCollision() {
                 int board_x = current_x + x;
                 int board_y = current_y + y;
                 
-                // Check boundaries (board has extra rows at top for spawning)
-                if (board_x < 0 || board_x >= Observation::BoardW ||
+                // Check boundaries - use actual playable board size
+                if (board_x < 0 || board_x >= Tetris::BOARD_WIDTH ||
                     board_y < 0 || board_y >= Observation::BoardH) {
                     return true;
                 }
@@ -295,17 +295,22 @@ void TetrisGame::lockPiece() {
 }
 
 int TetrisGame::clearLine(uint8_t row) {
-    // need to copy the row above recursively
-    for (int y = row; y > 0; y--) {
+    // Shift all rows above down by one
+    for (int y = row; y < Tetris::BOARD_HEIGHT - 1; y++) {
         for (int x = 0; x < Tetris::BOARD_WIDTH; x++) {
-            obs.board[row][x] = obs.board[row - 1][x];
+            obs.board[y][x] = obs.board[y + 1][x];
         }
+    }
+    // Clear the top row
+    for (int x = 0; x < Tetris::BOARD_WIDTH; x++) {
+        obs.board[Tetris::BOARD_HEIGHT - 1][x] = 0;
     }
     return 1;
 }
 
 int TetrisGame::clearLines() {
-    int scored = 0;
+    clearing_lines.clear();
+    
     // Check rows where the current piece was placed
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
         int row = current_y + y;
@@ -321,11 +326,20 @@ int TetrisGame::clearLines() {
         }
         
         if (is_full) {
-            scored += clearLine(row);
+            clearing_lines.push_back(row);
         }
     }
 
-    return scored;
+    // Return number of lines to clear (actual clearing happens after animation)
+    return clearing_lines.size();
+}
+
+void TetrisGame::completeClearLines() {
+    // Actually clear the marked lines
+    for (int row : clearing_lines) {
+        clearLine(row);
+    }
+    clearing_lines.clear();
 }
 
 #ifndef NO_TERMINAL_LOOP

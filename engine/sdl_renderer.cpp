@@ -183,7 +183,7 @@ namespace SDLRenderer {
         }
     }
     
-    void render(const Observation& obs, int score, bool game_over) {
+    void render(const Observation& obs, int score, bool game_over, const std::vector<int>& clearing_lines) {
         // Clear screen
         SDL_SetRenderDrawColor(renderer, BG_COLOR.r, BG_COLOR.g, BG_COLOR.b, 255);
         SDL_RenderClear(renderer);
@@ -198,19 +198,36 @@ namespace SDLRenderer {
         
         // Draw locked pieces
         for (int y = 0; y < Tetris::BOARD_HEIGHT; y++) {
+            // Check if this line is being cleared
+            bool is_clearing = false;
+            for (int clear_y : clearing_lines) {
+                if (clear_y == y) {
+                    is_clearing = true;
+                    break;
+                }
+            }
+            
             for (int x = 0; x < Tetris::BOARD_WIDTH; x++) {
                 uint8_t cell = obs.board[y][x];
                 if (cell > 0 && cell < 8) {
-                    drawCell(x, y, COLORS[cell], false);
+                    if (is_clearing) {
+                        // Flash white for clearing lines
+                        SDL_Color white = {255, 255, 255, 255};
+                        drawCell(x, y, white, false);
+                    } else {
+                        drawCell(x, y, COLORS[cell], false);
+                    }
                 }
             }
         }
         
-        // Draw active piece on top
-        for (int y = 0; y < Tetris::BOARD_HEIGHT; y++) {
-            for (int x = 0; x < Tetris::BOARD_WIDTH; x++) {
-                if (obs.active_tetromino[y][x]) {
-                    drawCell(x, y, ACTIVE_PIECE_COLOR, true);
+        // Draw active piece on top (unless lines are clearing)
+        if (clearing_lines.empty()) {
+            for (int y = 0; y < Tetris::BOARD_HEIGHT; y++) {
+                for (int x = 0; x < Tetris::BOARD_WIDTH; x++) {
+                    if (obs.active_tetromino[y][x]) {
+                        drawCell(x, y, ACTIVE_PIECE_COLOR, true);
+                    }
                 }
             }
         }

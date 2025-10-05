@@ -25,30 +25,34 @@ int main() {
             break;
         }
         
-        // Apply user input immediately (except NOOP and DOWN which are gravity)
-        if (action != Action::NOOP && action != Action::DOWN) {
+        // Apply user input immediately (except NOOP)
+        if (action != Action::NOOP) {
             game.applyAction(static_cast<uint8_t>(action));
             game.updateObservation();
         }
         
-        // Apply soft drop immediately if pressed
-        bool soft_drop_pressed = (action == Action::DOWN);
-        
-        // Apply gravity/down movement on tick
+        // Apply gravity on tick
         while (accumulate >= Tetris::TICK_RATE) {
-            // Apply DOWN if user pressed it this frame, otherwise just gravity
-            if (soft_drop_pressed) {
-                game.step(static_cast<int>(Action::DOWN));
-                soft_drop_pressed = false;  // Only apply once per press
-            } else {
-                game.updateGameState();  // Just gravity, no user action
-            }
+            game.updateGameState();  // Just gravity, no user action
             game.updateObservation();  // Update visual after gravity
+            
+            // If lines were cleared, show animation
+            if (!game.clearing_lines.empty()) {
+                // Show flashing animation for 400ms
+                for (int i = 0; i < 4; i++) {
+                    SDLRenderer::render(game.obs, game.score, game.game_over, game.clearing_lines);
+                    SDL_Delay(100);
+                }
+                // Actually clear the lines now
+                game.completeClearLines();
+                game.updateObservation();
+            }
+            
             accumulate -= Tetris::TICK_RATE;
         }
         
         // Render at full frame rate
-        SDLRenderer::render(game.obs, game.score, game.game_over);
+        SDLRenderer::render(game.obs, game.score, game.game_over, game.clearing_lines);
     }
     
     // Game over screen
