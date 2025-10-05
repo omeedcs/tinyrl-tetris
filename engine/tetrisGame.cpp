@@ -80,41 +80,80 @@ void TetrisGame::updateActiveMask() {
 void TetrisGame::applyAction(uint8_t action) {
     // LEFT, RIGHT, DOWN, CW, CCW, DROP, SWAP, NOOP
     // need to transform the current tetrimino
+    int old_x = current_x;
+    int old_y = current_y;
+    uint8_t old_rotation = rotation;
+    
     switch(action) {
         case Action::LEFT:
-            current_x += -1;
-            current_y += -1; // always move down one row
+            current_x -= 1;
+            if (checkCollision()) {
+                current_x = old_x;  // Revert if collision
+            }
             break;
         case Action::RIGHT:
             current_x += 1;
-            current_y += -1;
+            if (checkCollision()) {
+                current_x = old_x;  // Revert if collision
+            }
             break;
         case Action::DOWN:
-            current_y+= -1;
+            current_y -= 1;
+            if (checkCollision()) {
+                current_y = old_y;  // Revert if collision
+            }
             break;
         case Action::CW:
             rotation = (rotation + 1) % 4;
+            if (checkCollision()) {
+                rotation = old_rotation;  // Revert if collision
+            }
             break;
         case Action::CCW:
             rotation = (rotation - 1 + 4) % 4;
+            if (checkCollision()) {
+                rotation = old_rotation;  // Revert if collision
+            }
             break;
         case Action::DROP:
             while (!checkCollision()) {
-                current_y += -1;
+                current_y -= 1;
             }
-            current_y += 1;
+            current_y += 1;  // Back up to last valid position
+            // Lock the piece immediately after hard drop
+            lockPiece();
+            scored = clearLines();
+            score += scored;
+            spawnPiece();
+            if (checkCollision()) {
+                game_over = true;
+            }
             break;
         case Action::SWAP:
-            // need to check if swapping will cause collision
-            holder_type = current_piece_type;
-            current_piece_type = getNextPiece();
-            if (checkCollision()) {
-                // revert swap
+            // Swap with hold piece
+            if (holder_type == 7) {
+                // No piece in holder, just move current piece there
+                holder_type = current_piece_type;
+                current_piece_type = getNextPiece();
+                current_x = (Tetris::BOARD_WIDTH / 2);
+                current_y = Tetris::BOARD_HEIGHT - 1;
+                rotation = 0;
+            } else {
+                // Swap with held piece
+                uint8_t temp = current_piece_type;
                 current_piece_type = holder_type;
-                holder_type = setLastPiece(current_piece_type);
+                holder_type = temp;
+                current_x = (Tetris::BOARD_WIDTH / 2);
+                current_y = Tetris::BOARD_HEIGHT - 1;
+                rotation = 0;
             }
+            if (checkCollision()) {
+                // Can't swap - revert (shouldn't happen in normal play)
+                game_over = true;
+            }
+            break;
         default:
-            // invalid action
+            // invalid action or NOOP
             break;
     }
 }
@@ -123,14 +162,18 @@ void TetrisGame::updateGameState() {
     // need to lock piece and clear lines if we have reached a point of no return
     current_y -= 1;
     if (checkCollision()) {
+        current_y += 1;  // Restore position before locking
         // lock piece
         lockPiece();
         // clear lines
-        scored += clearLines();
+        scored = clearLines();
         score += scored;
-        return;
+        // spawn new piece
+        spawnPiece();
+        if (checkCollision()) {
+            game_over = true;
+        }
     }
-    current_y += 1;
 }
 
 void TetrisGame::updateObservation() {
@@ -145,7 +188,13 @@ void TetrisGame::updateObservation() {
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
         for (int x = 0; x < Tetris::PIECE_SIZE; x++) {
             if (Tetris::PIECES[current_piece_type][rotation][y][x]) {
-                obs.active_tetromino[current_y + y][current_x + x] = 1;
+                int board_y = current_y + y;
+                int board_x = current_x + x;
+                // Bounds check before writing
+                if (board_y >= 0 && board_y < Observation::BoardH &&
+                    board_x >= 0 && board_x < Observation::BoardW) {
+                    obs.active_tetromino[board_y][board_x] = 1;
+                }
             }
         }
     }
@@ -233,7 +282,13 @@ void TetrisGame::lockPiece() {
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
         for (int x = 0; x < Tetris::PIECE_SIZE; x++) {
             if (Tetris::PIECES[current_piece_type][rotation][y][x]) {
-                obs.board[current_y + y][current_x + x] = current_piece_type + 1;
+                int board_y = current_y + y;
+                int board_x = current_x + x;
+                // Bounds check before writing
+                if (board_y >= 0 && board_y < Observation::BoardH &&
+                    board_x >= 0 && board_x < Observation::BoardW) {
+                    obs.board[board_y][board_x] = current_piece_type + 1;
+                }
             }
         }
     }
@@ -273,6 +328,7 @@ int TetrisGame::clearLines() {
     return scored;
 }
 
+#ifndef NO_TERMINAL_LOOP
 void TetrisGame::loop() {
     double accumulate = 0.0;
 
@@ -295,3 +351,4 @@ void TetrisGame::loop() {
         }
     }
 }
+#endif

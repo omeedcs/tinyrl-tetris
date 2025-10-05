@@ -13,20 +13,56 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Source files
-set(SOURCES
-    main.cpp
+# Find SDL2 and SDL2_ttf
+find_package(SDL2 REQUIRED)
+find_package(SDL2_ttf REQUIRED)
+
+# Common source files (without loop dependencies)
+set(COMMON_SOURCES
     timeManager.cpp
-    tetrisGame.cpp
-    renderer.cpp
-    input.cpp
 )
 
-# Executable
-add_executable(tetris ${SOURCES})
+# Create a separate tetrisGame for SDL (without loop function)
+add_library(tetris_game_lib OBJECT
+    tetrisGame.cpp
+)
 
-# Include directories
-target_include_directories(tetris PRIVATE
+target_compile_definitions(tetris_game_lib PRIVATE NO_TERMINAL_LOOP)
+
+target_include_directories(tetris_game_lib PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# SDL version (GUI)
+add_executable(tetris_sdl
+    main_sdl.cpp
+    sdl_renderer.cpp
+    ${COMMON_SOURCES}
+    $<TARGET_OBJECTS:tetris_game_lib>
+)
+
+target_compile_definitions(tetris_sdl PRIVATE NO_TERMINAL_LOOP)
+
+target_include_directories(tetris_sdl PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${SDL2_INCLUDE_DIRS}
+)
+
+target_link_libraries(tetris_sdl
+    ${SDL2_LIBRARIES}
+    SDL2_ttf::SDL2_ttf
+)
+
+# Terminal version (legacy)
+add_executable(tetris_terminal
+    main.cpp
+    renderer.cpp
+    input.cpp
+    ${COMMON_SOURCES}
+)
+
+target_include_directories(tetris_terminal PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )

@@ -36,7 +36,9 @@ public:
     void updateActiveMask();
     void updateObservation();
     void applyAction(uint8_t action);
+#ifndef NO_TERMINAL_LOOP
     void loop();
+#endif
 
     // Made public for testing - consider friend class for production
     void spawnPiece();
