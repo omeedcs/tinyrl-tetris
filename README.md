@@ -4,121 +4,149 @@ A from-scratch reinforcement learning training system with custom CUDA kernels t
 
 ## 🎯 Project Overview
 
-TinyRL-Tetris is a high-performance RL training framework built entirely from scratch using C++, CUDA, and Python (for visualization only). The goal is to train an AI agent to play Tetris at expert level without relying too much on existing ML frameworks like PyTorch, TensorFlow, or JAX.
+TinyRL-Tetris is a high-performance RL training framework built from scratch using C++, CUDA, and Python. The goal is to train an AI agent to play Tetris at expert level.
 
 ### Key Features
 
-- **Custom CUDA Kernels**: All neural network operations, optimizers, and RL algorithms implemented in pure CUDA
-- **Massively Parallel**: 1000+ parallel Tetris games running simultaneously on GPU
-- **From-Scratch RL**: Complete PPO (Proximal Policy Optimization) implementation without ML framework dependencies
-- **Optimized for Speed**: Fused kernels, memory-efficient state representation, and batched environment simulation
-- **Production Ready**: Comprehensive evaluation suite, benchmarks, and visualization tools
+- **Optimized Tetris Engine**: High-performance C++ implementation with SDL2 visualization
+- **RL-Ready API**: Gym-like interface for training agents
+- **Custom CUDA Kernels**: Neural network operations and RL algorithms in pure CUDA (planned)
+- **Massively Parallel**: 1000+ parallel Tetris games on GPU (planned)
 
 ## 🏗️ Architecture
 
 ### Core Components
 
 #### 1. Tetris Game Engine (`engine/`)
-- Fully functional Tetris implementation in C/CUDA
-- Runs 1000+ parallel games simultaneously on GPU
-- Optimized for RL training workloads
-- Memory-efficient state representation
+- Fully functional Tetris implementation in C++
+- SDL2 renderer for visualization
+- Headless mode for training
 
 **Files:**
-- `tetris.cu` - Parallel game simulation kernels
-- `game_logic.cpp` - Core Tetris game rules and mechanics
+- `tetrisGame.cpp` - Core game logic
+- `main_sdl.cpp` - SDL2 visualization version
+- `main.cpp` - Headless version
 
-#### 2. RL Training Framework (`rl/`)
+<!-- 
+#### 2. RL Training Framework (`rl/`) - TODO
 - PPO (Proximal Policy Optimization) from scratch
 - Custom CUDA kernels for all operations
-- No PyTorch, TensorFlow, or JAX dependencies for core training
 
-**Files:**
-- `ppo.cu` - PPO algorithm implementation with GAE (Generalized Advantage Estimation)
-- `network.cu` - Policy and value networks with forward/backward passes
-- `optimizer.cu` - Adam optimizer in pure CUDA
-
-#### 3. Training System (`training/`)
+#### 3. Training System (`training/`) - TODO
 - Training loop coordinator
 - Experience replay buffer on GPU
 - Checkpointing and model persistence
 
-**Files:**
-- `trainer.cpp` - Main training loop and coordination
-- `replay_buffer.cu` - GPU-resident experience replay buffer
-
-#### 4. Evaluation & Visualization (`evaluation/`)
+#### 4. Evaluation & Visualization (`evaluation/`) - TODO
 - Benchmark suite comparing to baselines
 - Training curve visualizations
-- Gameplay recording and replay
-- Performance profiling dashboard
-
-**Files:**
-- `benchmark.py` - Comprehensive benchmark suite
-- `visualize.py` - Training curves and gameplay visualization
+-->
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- NVIDIA GPU with CUDA support (compute capability 7.0+)
-- CUDA Toolkit 11.8 or later
-- CMake 3.18+
-- GCC/G++ 9.0+ or Clang 10.0+
-- Python 3.8+ (for visualization only)
+- CMake 3.10+
+- C++17 compiler
+- SDL2 and SDL2_ttf libraries
+- (Optional) CUDA Toolkit 11.8+ for future GPU training
 
-### Building
+### Building and Running
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/tinyrl-tetris.git
-cd tinyrl-tetris
-
-# Build the project
-mkdir build && cd build
+# Build the SDL2 visualization version
+cd engine/build
 cmake ..
-make -j$(nproc)
+make
+
+# Run the game
+./bin/tetris_sdl
 ```
 
-### Training
+**Controls:**
+- A/D or Arrow Keys - Move left/right
+- W or Up - Rotate clockwise
+- E - Rotate counter-clockwise
+- S or Down - Soft drop
+- Space - Hard drop
+- C - Hold piece
+- R - Reset game
+- ESC - Quit
+
+### Running Tests
 
 ```bash
-# Run training with default config
-./build/trainer --num-envs 1024 --total-timesteps 10000000
-
-# Resume from checkpoint
-./build/trainer --checkpoint checkpoints/model_1000000.pt
-
-# Custom configuration
-./build/trainer --config configs/fast_train.json
+cd tests/build
+cmake ..
+make
+./bin/run_tests
 ```
 
-### Evaluation
+## 🤖 RL Training API
 
-```bash
-# Run benchmark suite
-python evaluation/benchmark.py --checkpoint checkpoints/best_model.pt --episodes 1000
+The Tetris engine exposes a Gym-like interface for training RL agents:
 
-# Visualize training curves
-python evaluation/visualize.py --log-dir logs/run_001/
+```cpp
+// C++ API
+TetrisGame game(TimeManager::REALTIME, queue_size=3);
 
-# Watch trained agent play
-./build/play --checkpoint checkpoints/best_model.pt --render
+// Reset environment
+game.reset();
+
+// Step with action
+StepResult result = game.step(action);
+// result.obs - Current observation (board, active piece, queue, holder)
+// result.reward - Reward for this step
+// result.terminated - Whether game is over
+
+// Get observation
+Observation obs = game.obs;
+// obs.board - 18x24 grid with piece types (0=empty, 1-7=piece types)
+// obs.active_tetromino - 18x24 binary mask of current falling piece
+// obs.queue - Upcoming pieces (queue_size * 4x4 grids)
+// obs.holder - Held piece (4x4 grid)
+```
+
+**Actions:**
+- `LEFT` (0) - Move left
+- `RIGHT` (1) - Move right  
+- `DOWN` (2) - Soft drop
+- `CW` (3) - Rotate clockwise
+- `CCW` (4) - Rotate counter-clockwise
+- `DROP` (5) - Hard drop
+- `SWAP` (6) - Hold/swap piece
+- `NOOP` (7) - No operation
+
+**Rewards:**
+- Line clears: Points based on standard Tetris scoring
+- Game over: Negative reward
+- Height penalty: Optional (configurable)
+
+### Python Bindings (Planned)
+
+```python
+import tinyrl_tetris
+
+env = tinyrl_tetris.TetrisEnv(queue_size=3)
+obs = env.reset()
+
+for _ in range(1000):
+    action = agent.get_action(obs)
+    obs, reward, done, info = env.step(action)
+    
+    if done:
+        obs = env.reset()
 ```
 
 ## 📈 Roadmap
 
-- [x] Project structure and dummy files
-- [ ] Tetris game engine implementation
-- [ ] Neural network forward/backward passes
-- [ ] PPO algorithm implementation
-- [ ] Training loop and checkpointing
-- [ ] Benchmark suite
-- [ ] Visualization tools
-- [ ] Performance profiling
-- [ ] Multi-GPU support
-- [ ] Hyperparameter tuning
-- [ ] Documentation and tutorials
+- [x] Tetris game engine implementation
+- [x] SDL2 visualization
+- [x] Comprehensive test suite
+- [ ] Python bindings for RL training
+- [ ] PPO implementation
+- [ ] Custom CUDA kernels for parallel simulation
+- [ ] Multi-GPU training support
 
 ## 🤝 Contributing
 
