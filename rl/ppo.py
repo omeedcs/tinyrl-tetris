@@ -27,7 +27,7 @@ class ActorCritic(nn.Module):
     def get_action_and_value(self, state, action = None):
         action_logits, values = self(state)
         # our action space is discrete...
-        dist = Categorical(logits = action_logits)
+        dist = Categorical(logits = action_logits) # categorical distribution computes the probability dist over discrte actions.
         if action is None:
             action = dist.sample() # sample an action during rollout.
 
