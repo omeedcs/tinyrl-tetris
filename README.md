@@ -122,20 +122,60 @@ Observation obs = game.obs;
 - Game over: Negative reward
 - Height penalty: Optional (configurable)
 
-### Python Bindings (Planned)
+### Python Bindings
 
+**Installation:**
+```bash
+cd engine/build
+cmake ..
+make
+# Module will be at: lib/tinyrl_tetris.*.so
+```
+
+**Usage:**
 ```python
+import sys
+sys.path.insert(0, 'engine/build/lib')
 import tinyrl_tetris
+import numpy as np
 
-env = tinyrl_tetris.TetrisEnv(queue_size=3)
+# Create environment
+env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.REALTIME, queue_size=3)
+
+# Reset returns observation dict
 obs = env.reset()
+# obs = {
+#     'board': np.ndarray (24, 18) - Board state with piece types
+#     'active_piece': np.ndarray (24, 18) - Binary mask of falling piece
+#     'queue': np.ndarray (12, 4) - Next 3 pieces (queue_size * 4x4)
+#     'holder': np.ndarray (4, 4) - Held piece
+# }
 
-for _ in range(1000):
-    action = agent.get_action(obs)
+# Game loop
+done = False
+total_reward = 0
+
+while not done:
+    # Take action
+    action = np.random.randint(0, 8)  # Random agent
     obs, reward, done, info = env.step(action)
+    total_reward += reward
     
-    if done:
-        obs = env.reset()
+    print(f"Score: {env.score}, Reward: {reward}")
+
+print(f"Game Over! Total reward: {total_reward}")
+```
+
+**Available Actions:**
+```python
+tinyrl_tetris.LEFT    # 0
+tinyrl_tetris.RIGHT   # 1
+tinyrl_tetris.DOWN    # 2
+tinyrl_tetris.CW      # 3 - Rotate clockwise
+tinyrl_tetris.CCW     # 4 - Rotate counter-clockwise
+tinyrl_tetris.DROP    # 5 - Hard drop
+tinyrl_tetris.SWAP    # 6 - Hold piece
+tinyrl_tetris.NOOP    # 7
 ```
 
 ## 📈 Roadmap
@@ -143,8 +183,8 @@ for _ in range(1000):
 - [x] Tetris game engine implementation
 - [x] SDL2 visualization
 - [x] Comprehensive test suite
-- [ ] Python bindings for RL training
-- [ ] PPO implementation
+- [x] Python bindings for RL training
+- [ ] Train baseline PPO agent
 - [ ] Custom CUDA kernels for parallel simulation
 - [ ] Multi-GPU training support
 
