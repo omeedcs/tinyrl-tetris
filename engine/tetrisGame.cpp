@@ -1,13 +1,10 @@
 #include "tetrisGame.h"
 #include "pieces.h"
-#include "tetrisGame.h"
-#include "pieces.h"
 #include "constants.h"
 #include "input.h"
 #include "renderer.h"
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
 
 TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size)
     : tm(TimeManager(m)), queue_size(queue_size), score(0), game_over(false) {
@@ -46,6 +43,7 @@ void TetrisGame::reset() {
             obs.active_tetromino[y][x] = 0;
         }
     }
+    ;
     
     // Clear holder
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
@@ -378,28 +376,3 @@ void TetrisGame::completeClearLines() {
     }
     clearing_lines.clear();
 }
-
-#ifndef NO_TERMINAL_LOOP
-void TetrisGame::loop() {
-    double accumulate = 0.0;
-
-    // this is our main game loop
-    while (!isGameOver()) {
-        accumulate += tm.getDeltaTime();
-
-        while (accumulate >= Tetris::TICK_RATE) {
-            // get action
-            int action = Input::getAction();
-
-            // update game
-            step(action);
-            accumulate -= Tetris::TICK_RATE;
-
-            // render if needed
-            if (tm.needRendering()) {
-                Renderer::render(obs);
-            }
-        }
-    }
-}
-#endif
