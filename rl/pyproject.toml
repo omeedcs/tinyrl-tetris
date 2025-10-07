@@ -1,0 +1,11 @@
+[project]
+name = "rl-project"
+version = "0.1.0"
+dependencies = [
+    "gymnasium>=1.0.0",
+    "tetris-gymnasium",
+    "torch>=2.0.0",
+    "numpy",
+]
+[project.optional-dependencies]
+all = ["gymnasium[all]"]  # For extra envs like Atari or MuJoCo
