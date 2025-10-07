@@ -82,49 +82,16 @@ make
 ./bin/run_tests
 ```
 
-## 🤖 RL Training API
+## 🐍 Python API for RL Training
 
-The Tetris engine exposes a Gym-like interface for training RL agents:
+### Quick Setup
 
-```cpp
-// C++ API
-TetrisGame game(TimeManager::REALTIME, queue_size=3);
-
-// Reset environment
-game.reset();
-
-// Step with action
-StepResult result = game.step(action);
-// result.obs - Current observation (board, active piece, queue, holder)
-// result.reward - Reward for this step
-// result.terminated - Whether game is over
-
-// Get observation
-Observation obs = game.obs;
-// obs.board - 18x24 grid with piece types (0=empty, 1-7=piece types)
-// obs.active_tetromino - 18x24 binary mask of current falling piece
-// obs.queue - Upcoming pieces (queue_size * 4x4 grids)
-// obs.holder - Held piece (4x4 grid)
+```bash
+./setup.sh  # Builds everything and sets up Python module
 ```
 
-**Actions:**
-- `LEFT` (0) - Move left
-- `RIGHT` (1) - Move right  
-- `DOWN` (2) - Soft drop
-- `CW` (3) - Rotate clockwise
-- `CCW` (4) - Rotate counter-clockwise
-- `DROP` (5) - Hard drop
-- `SWAP` (6) - Hold/swap piece
-- `NOOP` (7) - No operation
+### Manual Setup
 
-**Rewards:**
-- Line clears: Points based on standard Tetris scoring
-- Game over: Negative reward
-- Height penalty: Optional (configurable)
-
-### Python Bindings
-
-**Installation:**
 ```bash
 cd engine/build
 cmake ..
@@ -132,50 +99,60 @@ make
 # Module will be at: lib/tinyrl_tetris.*.so
 ```
 
-**Usage:**
+### Environment Interface
+
 ```python
 import sys
 sys.path.insert(0, 'engine/build/lib')
 import tinyrl_tetris
-import numpy as np
 
 # Create environment
 env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.REALTIME, queue_size=3)
 
-# Reset returns observation dict
+# Reset - returns observation dict
 obs = env.reset()
-# obs = {
-#     'board': np.ndarray (24, 18) - Board state with piece types
-#     'active_piece': np.ndarray (24, 18) - Binary mask of falling piece
-#     'queue': np.ndarray (12, 4) - Next 3 pieces (queue_size * 4x4)
-#     'holder': np.ndarray (4, 4) - Held piece
-# }
 
-# Game loop
-done = False
-total_reward = 0
+# Step - returns (obs, reward, done, info)
+obs, reward, done, info = env.step(tinyrl_tetris.LEFT)
 
-while not done:
-    # Take action
-    action = np.random.randint(0, 8)  # Random agent
-    obs, reward, done, info = env.step(action)
-    total_reward += reward
-    
-    print(f"Score: {env.score}, Reward: {reward}")
-
-print(f"Game Over! Total reward: {total_reward}")
+# Access game state
+print(env.score)
+print(env.game_over)
 ```
 
-**Available Actions:**
+**Observation Structure:**
 ```python
-tinyrl_tetris.LEFT    # 0
-tinyrl_tetris.RIGHT   # 1
-tinyrl_tetris.DOWN    # 2
-tinyrl_tetris.CW      # 3 - Rotate clockwise
-tinyrl_tetris.CCW     # 4 - Rotate counter-clockwise
-tinyrl_tetris.DROP    # 5 - Hard drop
-tinyrl_tetris.SWAP    # 6 - Hold piece
-tinyrl_tetris.NOOP    # 7
+obs = {
+    'board': np.ndarray (24, 18),        # Board state (0=empty, 1-7=piece types)
+    'active_piece': np.ndarray (24, 18), # Current falling piece (binary mask)
+    'queue': np.ndarray (12, 4),         # Next 3 pieces (queue_size * 4x4)
+    'holder': np.ndarray (4, 4)          # Held piece
+}
+```
+
+**Actions:**
+```python
+tinyrl_tetris.LEFT     # 0 - Move left
+tinyrl_tetris.RIGHT    # 1 - Move right
+tinyrl_tetris.DOWN     # 2 - Soft drop
+tinyrl_tetris.CW       # 3 - Rotate clockwise
+tinyrl_tetris.CCW      # 4 - Rotate counter-clockwise
+tinyrl_tetris.DROP     # 5 - Hard drop
+tinyrl_tetris.SWAP     # 6 - Hold/swap piece
+tinyrl_tetris.NOOP     # 7 - No operation
+```
+
+**Example: Random Agent**
+```python
+import numpy as np
+
+env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.REALTIME, queue_size=3)
+obs = env.reset()
+
+while not env.game_over:
+    action = np.random.randint(0, 8)
+    obs, reward, done, info = env.step(action)
+    print(f"Score: {env.score}, Reward: {reward}")
 ```
 
 ## 📈 Roadmap
