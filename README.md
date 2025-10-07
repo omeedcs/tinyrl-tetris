@@ -82,60 +82,77 @@ make
 ./bin/run_tests
 ```
 
-## 🤖 RL Training API
+## 🐍 Python API for RL Training
 
-The Tetris engine exposes a Gym-like interface for training RL agents:
+### Quick Setup
 
-```cpp
-// C++ API
-TetrisGame game(TimeManager::REALTIME, queue_size=3);
+```bash
+./setup.sh  # Builds everything and sets up Python module
+```
 
-// Reset environment
-game.reset();
+### Manual Setup
 
-// Step with action
-StepResult result = game.step(action);
-// result.obs - Current observation (board, active piece, queue, holder)
-// result.reward - Reward for this step
-// result.terminated - Whether game is over
+```bash
+cd engine/build
+cmake ..
+make
+# Module will be at: lib/tinyrl_tetris.*.so
+```
 
-// Get observation
-Observation obs = game.obs;
-// obs.board - 18x24 grid with piece types (0=empty, 1-7=piece types)
-// obs.active_tetromino - 18x24 binary mask of current falling piece
-// obs.queue - Upcoming pieces (queue_size * 4x4 grids)
-// obs.holder - Held piece (4x4 grid)
+### Environment Interface
+
+```python
+import sys
+sys.path.insert(0, 'engine/build/lib')
+import tinyrl_tetris
+
+# Create environment
+env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.REALTIME, queue_size=3)
+
+# Reset - returns observation dict
+obs = env.reset()
+
+# Step - returns (obs, reward, done, info)
+obs, reward, done, info = env.step(tinyrl_tetris.LEFT)
+
+# Access game state
+print(env.score)
+print(env.game_over)
+```
+
+**Observation Structure:**
+```python
+obs = {
+    'board': np.ndarray (24, 18),        # Board state (0=empty, 1-7=piece types)
+    'active_piece': np.ndarray (24, 18), # Current falling piece (binary mask)
+    'queue': np.ndarray (12, 4),         # Next 3 pieces (queue_size * 4x4)
+    'holder': np.ndarray (4, 4)          # Held piece
+}
 ```
 
 **Actions:**
-- `LEFT` (0) - Move left
-- `RIGHT` (1) - Move right  
-- `DOWN` (2) - Soft drop
-- `CW` (3) - Rotate clockwise
-- `CCW` (4) - Rotate counter-clockwise
-- `DROP` (5) - Hard drop
-- `SWAP` (6) - Hold/swap piece
-- `NOOP` (7) - No operation
-
-**Rewards:**
-- Line clears: Points based on standard Tetris scoring
-- Game over: Negative reward
-- Height penalty: Optional (configurable)
-
-### Python Bindings (Planned)
-
 ```python
-import tinyrl_tetris
+tinyrl_tetris.LEFT     # 0 - Move left
+tinyrl_tetris.RIGHT    # 1 - Move right
+tinyrl_tetris.DOWN     # 2 - Soft drop
+tinyrl_tetris.CW       # 3 - Rotate clockwise
+tinyrl_tetris.CCW      # 4 - Rotate counter-clockwise
+tinyrl_tetris.DROP     # 5 - Hard drop
+tinyrl_tetris.SWAP     # 6 - Hold/swap piece
+tinyrl_tetris.NOOP     # 7 - No operation
+```
 
-env = tinyrl_tetris.TetrisEnv(queue_size=3)
+**Example: Random Agent**
+```python
+import numpy as np
+
+env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.REALTIME, queue_size=3)
 obs = env.reset()
 
-for _ in range(1000):
-    action = agent.get_action(obs)
+while not env.game_over:
+    action = np.random.randint(0, 8)
     obs, reward, done, info = env.step(action)
-    
-    if done:
-        obs = env.reset()
+    print(f"Score: {env.score}, Reward: {reward}")
 ```
 
 ## 📈 Roadmap
@@ -143,8 +160,8 @@ for _ in range(1000):
 - [x] Tetris game engine implementation
 - [x] SDL2 visualization
 - [x] Comprehensive test suite
-- [ ] Python bindings for RL training
-- [ ] PPO implementation
+- [x] Python bindings for RL training
+- [ ] Train baseline PPO agent
 - [ ] Custom CUDA kernels for parallel simulation
 - [ ] Multi-GPU training support
 
