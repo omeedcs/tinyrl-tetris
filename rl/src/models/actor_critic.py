@@ -1,7 +1,7 @@
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.distributions import Categorical
 
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_size):
@@ -33,15 +33,4 @@ class ActorCritic(nn.Module):
 
         log_prob = dist.log_prob(action) # section 3, equation 7.
         entropy = dist.entropy() # how well our prediction matched our true distribution?
-        return action, log_prob, entropy, value.squeeze(-1)
-
-
-
-
-    
-        
-
-
-
-
-
+        return action, log_prob, entropy, values.squeeze(-1)

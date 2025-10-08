@@ -1,41 +1,53 @@
-import torch 
+# src/agents/ppo_agent.py
+import torch
+import torch.nn as nn
 import torch.optim as optim
+from torch.distributions import Categorical
 import gymnasium as gym
 import numpy as np
+import tetris_gymnasium.envs  # Register the Tetris environment
 
 from src.models.actor_critic import ActorCritic
 from src.configs.hyperparameters import *
+from src.wrappers import FlattenObservation
+
 
 def collect_rollouts(env, model, max_steps):
     states, actions, log_probs, rewards, dones, values = [], [], [], [], [], []
     state, _ = env.reset()
     done = False
     # when len(states) < max_steps, we haven't collected enough steps
-    while len(states) < max_steps and not done:
+    while len(states) < max_steps:
         #Returns a new tensor with a dimension of size one inserted at the specified position -> unsqueeze. 
         state_tensor = torch.FloatTensor(state).unsqueeze(0) # we have to unsqueeze to make it a batch of size 1
-        action, log_prob, _, value = model.get_action_and_value(state_tensor)
-        action = action.item() # item is used in pytorch to extract a single value from a tensor.
-        log_prob = log_prob.item()
-        log_probs.append(log_prob.detach())
-        values.append(value.detach())
+        with torch.no_grad():  # Don't track gradients during rollout collection
+            action, log_prob, _, value = model.get_action_and_value(state_tensor)
+        action_item = action.item() # item is used in pytorch to extract a single value from a tensor.
+        
+        states.append(state)
+        actions.append(action_item)
+        log_probs.append(log_prob)
+        values.append(value)
+        
         # we detatch so it is not included in the computational graph, could lead to gradient explosion?
-        next_state, reward, terminated, truncated, info = env.step(action)
+        next_state, reward, terminated, truncated, info = env.step(action_item)
         done = terminated or truncated
         rewards.append(reward)
         dones.append(done)
         state = next_state
         if done:
             state, _ = env.reset()
+            done = False
 
-        if not done:
-            next_state_tensor = torch.FloatTensor(state).unsqueeze(0)
+    # Compute next_value for the last state
+    if not dones[-1]:  # If the last episode didn't terminate
+        next_state_tensor = torch.FloatTensor(state).unsqueeze(0)
+        with torch.no_grad():
             _, _, _, next_value = model.get_action_and_value(next_state_tensor)
-            next_value = next_value.detach()
-        else:
-            next_value = torch.zeros(1)
-        
-        return states, actions, log_probs, rewards, dones, values, next_value
+    else:
+        next_value = torch.zeros(1)
+    
+    return states, actions, log_probs, rewards, dones, values, next_value
 
         
 def compute_advantages_and_returns(rewards, dones, values, next_value, gamma, lambda_):
@@ -137,6 +149,44 @@ def ppo_update(model, optimizer, states, actions, old_log_probs, advantages, ret
             loss.backward()
             optimizer.step()
 
-def train(env, model, optimizer, num_updates):
-    pass
-
+def train_ppo():
+    """
+    Main training loop (paper Algorithm 1).
+    Create env, get dims.
+    Instantiate model and optimizer.
+    for update in range(NUM_UPDATES): Loop over updates.
+    Collect rollouts.
+    Compute advantages/returns.
+    Perform PPO update.
+    Every 10 updates, evaluate on 10 episodes and print avg reward (for monitoring).
+    """
+    print("Creating environment...")
+    env = gym.make(ENV_NAME)
+    env = FlattenObservation(env)  # Flatten dict observations
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+    print(f"State dim: {state_dim}, Action dim: {action_dim}")
+    model = ActorCritic(state_dim, action_dim, HIDDEN_SIZE)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    print("Starting training...")
+    
+    for update in range(NUM_UPDATES):
+        states_list, actions_list, log_probs_list, rewards_list, dones_list, values_list, next_value = collect_rollouts(env, model, MAX_STEPS)
+        
+        advantages, returns = compute_advantages_and_returns(rewards_list, dones_list, values_list, next_value, GAMMA, LAMBDA)
+        
+        ppo_update(model, optimizer, states_list, actions_list, log_probs_list, advantages, returns, CLIP_EPS, VALUE_CLIP_EPS, ENTROPY_COEF, VALUE_LOSS_COEF, EPOCHS, BATCH_SIZE)
+        
+        if update % 10 == 0:
+            eval_rewards = []
+            for _ in range(10):
+                state, _ = env.reset()
+                done = False
+                total_reward = 0
+                while not done:
+                    state_tensor = torch.FloatTensor(state).unsqueeze(0)
+                    action, _, _, _ = model.get_action_and_value(state_tensor)
+                    state, reward, done, _, _ = env.step(action.item())
+                    total_reward += reward
+                eval_rewards.append(total_reward)
+            print(f"Update {update}: Avg reward = {np.mean(eval_rewards)}")

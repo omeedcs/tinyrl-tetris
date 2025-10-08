@@ -1,3 +1,5 @@
+ENV_NAME = "tetris_gymnasium/Tetris"
+
 GAMMA = 0.99
 LAMBDA = 0.95
 CLIP_EPS = 0.2
