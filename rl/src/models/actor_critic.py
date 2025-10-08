@@ -31,7 +31,7 @@ class ActorCritic(nn.Module):
         if action is None:
             action = dist.sample() # sample an action during rollout.
 
-        log_prob = dist.log_prob(action)
+        log_prob = dist.log_prob(action) # section 3, equation 7.
         entropy = dist.entropy() # how well our prediction matched our true distribution?
         return action, log_prob, entropy, value.squeeze(-1)
 
