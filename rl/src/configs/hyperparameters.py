@@ -1,4 +1,4 @@
-ENV_NAME = "tetris_gymnasium/Tetris"
+ENV_NAME = "gymnasium_env/TetrisEnv-v0"
 
 GAMMA = 0.99
 LAMBDA = 0.95
