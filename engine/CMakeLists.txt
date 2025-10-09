@@ -17,6 +17,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
+# Find Python (before pybind11)
+set(PYBIND11_FINDPYTHON ON)
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
 # find pybind11
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../extern/pybind11 ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
 
