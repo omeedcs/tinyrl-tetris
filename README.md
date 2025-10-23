@@ -155,12 +155,40 @@ while not env.game_over:
     print(f"Score: {env.score}, Reward: {reward}")
 ```
 
+## ⚡ Performance Benchmarks
+
+The custom TinyRL C++ Tetris engine significantly outperforms existing Python implementations:
+
+| Environment | Steps/sec | Speedup |
+|------------|-----------|---------|
+| **TinyRL C++ Engine** | **35,089** | **baseline** |
+| TinyRL + Gym Wrapper | 32,366 | 0.92x |
+| Tetris-Gymnasium (Python) | 10,787 | 0.31x |
+
+**Key Findings:**
+- TinyRL is **3.3x faster** than Tetris-Gymnasium
+- Gymnasium wrapper adds only ~8% overhead
+- Critical for RL training with millions of steps
+
+### Running Benchmarks
+
+```bash
+cd rl
+uv run python benchmark_envs.py
+```
+
+The benchmark compares:
+1. Raw C++ engine performance
+2. C++ engine with Gymnasium wrapper (used for training)
+3. Tetris-Gymnasium Python implementation
+
 ## 📈 Roadmap
 
 - [x] Tetris game engine implementation
 - [x] SDL2 visualization
 - [x] Comprehensive test suite
 - [x] Python bindings for RL training
+- [x] Performance benchmarks vs existing implementations
 - [ ] Train baseline PPO agent
 - [ ] Custom CUDA kernels for parallel simulation
 - [ ] Multi-GPU training support
