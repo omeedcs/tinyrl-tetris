@@ -182,9 +182,12 @@ def train_ppo():
 
         ppo_update(model, optimizer, states_list, actions_list, log_probs_list, advantages, returns, CLIP_EPS, VALUE_CLIP_EPS, ENTROPY_COEF, VALUE_LOSS_COEF, EPOCHS, BATCH_SIZE)
 
-        if update % 10 == 0:
+        # Show progress more frequently early on
+        if update < 10 or update % 10 == 0:
+            # Quick eval with fewer episodes
+            num_eval = 3 if update < 100 else 10
             eval_rewards = []
-            for _ in range(10):
+            for _ in range(num_eval):
                 state, _ = env.reset()
                 done = False
                 total_reward = 0
@@ -194,4 +197,4 @@ def train_ppo():
                     state, reward, done, _, _ = env.step(action.item())
                     total_reward += reward
                 eval_rewards.append(total_reward)
-            print(f"Update {update}: Avg reward = {np.mean(eval_rewards)}")
+            print(f"Update {update}/{NUM_UPDATES}: Avg reward = {np.mean(eval_rewards):.2f} (±{np.std(eval_rewards):.2f})")

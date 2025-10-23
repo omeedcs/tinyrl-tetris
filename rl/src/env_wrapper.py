@@ -19,7 +19,7 @@ class TetrisEnv(gym.Env):
     def __init__(self, queue_size=3):
         super().__init__()
         self.queue_size = queue_size
-        self.env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.REALTIME, queue_size=queue_size)
+        self.env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.STEPPED, queue_size=queue_size)
 
         # Action space: 7 discrete actions (LEFT, RIGHT, DOWN, CW, CCW, DROP, SWAP)
         self.action_space = gym.spaces.Discrete(7)
