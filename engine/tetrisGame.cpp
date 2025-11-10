@@ -4,7 +4,6 @@
 #include "input.h"
 #include "renderer.h"
 #include <cstdint>
-#include <cstdlib>
 #include <random>
 
 
@@ -18,7 +17,7 @@ TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size, uint32_t seed)
     // Initialize queue with random pieces
     queue.resize(queue_size);
     for (int i = 0; i < queue_size; i++) {
-        queue[i] = rand() % 7;
+        queue[i] = samplePiece();
     }
 
     // update current piece data
@@ -69,7 +68,7 @@ void TetrisGame::reset() {
     
     // Reset queue with new random pieces
     for (int i = 0; i < queue_size; i++) {
-        queue[i] = rand() % 7;
+        queue[i] = samplePiece();
     }
     queue_index = 0;
     
@@ -95,7 +94,7 @@ void TetrisGame::reset() {
 uint8_t TetrisGame::getNextPiece() {
     // update tetris game variables
     uint8_t next_piece = queue[queue_index];
-    queue[queue_index] = rand() % 7;
+    queue[queue_index] = samplePiece();
     queue_index = (queue_index + 1) % queue_size;
     return next_piece;
 }
