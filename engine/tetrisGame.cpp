@@ -5,9 +5,11 @@
 #include "renderer.h"
 #include <cstdint>
 #include <cstdlib>
+#include <random>
 
-TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size)
-    : tm(TimeManager(m)), queue_size(queue_size), score(0), game_over(false) {
+
+TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size, uint32_t seed)
+    : tm(TimeManager(m)), queue_size(queue_size), score(0), game_over(false), rng_(seed) {
     obs.board.resize(Observation::BoardH, std::vector<uint8_t>(Observation::BoardW, 0));
     obs.active_tetromino.resize(Observation::BoardH, std::vector<uint8_t>(Observation::BoardW, 0));
     obs.holder.resize(Tetris::PIECE_SIZE, std::vector<uint8_t>(Tetris::PIECE_SIZE, 0));
@@ -28,11 +30,17 @@ TetrisGame::TetrisGame(TimeManager::Mode m, uint8_t queue_size)
     current_piece_type = getNextPiece(); // pop from the queue
 
     if (checkCollision()) {
-        game_over = true;
+        game_over = true; 
     }
 
     // adjusts current matrix with newly minted values
     updateActiveMask();
+}
+
+uint8_t TetrisGame::samplePiece() {
+    static constexpr int MaxPiece = 6;
+    std::uniform_int_distribution<int> dist(0, MaxPiece);
+    return static_cast<uint8_t>(dist(rng_));
 }
 
 void TetrisGame::reset() {
@@ -45,7 +53,7 @@ void TetrisGame::reset() {
     }
     ;
     
-    // Clear holder
+    // Clear holder 
     for (int y = 0; y < Tetris::PIECE_SIZE; y++) {
         for (int x = 0; x < Tetris::PIECE_SIZE; x++) {
             obs.holder[y][x] = 0;

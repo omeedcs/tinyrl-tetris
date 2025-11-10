@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <cstdint>
+#include <random>
 #include "timeManager.h"
 
 enum Action : uint8_t {
@@ -25,7 +26,7 @@ struct StepResult {
 
 class TetrisGame {
 public:
-    TetrisGame(TimeManager::Mode m, uint8_t queue_size = 3);
+    TetrisGame(TimeManager::Mode m, uint8_t queue_size = 3, uint32_t seed = std::random_device{}());
     void reset();
     StepResult step(int action);
     float getReward();
@@ -39,6 +40,10 @@ public:
 #ifndef NO_TERMINAL_LOOP
     void loop();
 #endif
+
+    // for random sampling
+    uint8_t samplePiece();
+    std::mt19937 rng_;
 
     // Made public for testing - consider friend class for production
     void spawnPiece();
