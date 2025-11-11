@@ -2,8 +2,10 @@
 #include <memory>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 #include "tetrisGame.h"
+#include "batched_collector.h"
 
 namespace py = pybind11;
 
@@ -80,5 +82,18 @@ PYBIND11_MODULE(tinyrl_tetris, m, py::mod_gil_not_used()) {
         .value("REALTIME", TimeManager::Mode::REALTIME)
         .value("STEPPED", TimeManager::Mode::SIMULATION)
         .export_values();
+
+    py::class_<BatchedTetrisCollector>(m, "BatchedTetrisCollector")
+        .def(py::init<size_t, uint32_t, uint8_t, uint32_t>(),
+             py::arg("num_workers"),
+             py::arg("max_steps"),
+             py::arg("queue_size") = 3,
+             py::arg("seed_base") = 0)
+        .def("request_episodes", &BatchedTetrisCollector::request_episodes,
+             py::arg("num_episodes"),
+             py::arg("policy_fn"))
+        .def("close", &BatchedTetrisCollector::close)
+        .def_property_readonly("obs_dim", &BatchedTetrisCollector::obs_dim)
+        .def_property_readonly("max_steps", &BatchedTetrisCollector::max_steps);
 
 }

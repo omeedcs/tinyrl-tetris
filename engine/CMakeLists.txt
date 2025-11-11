@@ -16,6 +16,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Find SDL2 and SDL2_ttf
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+find_package(Threads REQUIRED)
 
 # Find Python (before pybind11)
 set(PYBIND11_FINDPYTHON ON)
@@ -61,6 +62,14 @@ target_link_libraries(tetris_sdl
     SDL2_ttf::SDL2_ttf
 )
 
+add_executable(worker
+        worker.cpp
+        ${COMMON_SOURCES}
+        $<TARGET_OBJECTS:tetris_game_lib>
+    )
+target_include_directories(worker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(worker PRIVATE Threads::Threads)
+
 # Terminal version (legacy) - disabled, needs loop() function
 # add_executable(tetris_terminal
 #     main.cpp
@@ -78,6 +87,7 @@ target_link_libraries(tetris_sdl
 pybind11_add_module(tinyrl_tetris
     bindings.cpp
     tetrisGame.cpp
+    batched_collector.cpp
     ${COMMON_SOURCES}
 )
 
@@ -86,3 +96,5 @@ target_compile_definitions(tinyrl_tetris PRIVATE NO_TERMINAL_LOOP)
 target_include_directories(tinyrl_tetris PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+target_link_libraries(tinyrl_tetris PRIVATE Threads::Threads)

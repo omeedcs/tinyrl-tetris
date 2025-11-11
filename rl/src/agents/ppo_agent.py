@@ -11,42 +11,41 @@ from src.models.actor_critic import ActorCritic
 from src.configs.hyperparameters import (
     GAMMA, LAMBDA, CLIP_EPS, VALUE_CLIP_EPS, ENTROPY_COEF,
     VALUE_LOSS_COEF, EPOCHS, BATCH_SIZE, MAX_STEPS,
-    LEARNING_RATE, HIDDEN_SIZE, NUM_UPDATES, ENV_NAME
+    ROLLOUT_EPISODES, COLLECTOR_WORKERS,
+    LEARNING_RATE, HIDDEN_SIZE,
+    NUM_UPDATES, ENV_NAME
 )
 from src.wrappers import FlattenObservation
 import src.env_wrapper # registers the env
+from src.batched_collector import BatchedTetrisCollector
 
-
-def collect_rollouts(env, model, max_steps):
-    states, actions, log_probs, rewards, dones, values = [], [], [], [], [], []
-    state, _ = env.reset()
-    done = False
-    # when len(states) < max_steps, we haven't collected enough steps
-    while len(states) < max_steps:
-        #Returns a new tensor with a dimension of size one inserted at the specified position -> unsqueeze.
-        state_tensor = torch.FloatTensor(state).unsqueeze(0) # we have to unsqueeze to make it a batch of size 1
-        with torch.no_grad():  # Don't track gradients during rollout collection
+def collect_rollouts(collector, model, num_episodes):
+    """Use the multithreaded collector to gather padded episode batches."""
+    def policy_fn(state: np.ndarray):
+        state_tensor = torch.from_numpy(state).float().unsqueeze(0)
+        with torch.no_grad():
             action, log_prob, _, value = model.get_action_and_value(state_tensor)
-        action_item = action.item() # item is used in pytorch to extract a single value from a tensor.
+        return action.item(), float(log_prob.item()), float(value.item())
 
-        states.append(state)
-        actions.append(action_item)
-        log_probs.append(log_prob)
-        values.append(value)
+    batch = collector.request_episodes(num_episodes, policy_fn)
 
-        # we detatch so it is not included in the computational graph, could lead to gradient explosion?
-        next_state, reward, terminated, truncated, info = env.step(action_item)
-        done = terminated or truncated
-        rewards.append(reward)
-        dones.append(done)
-        state = next_state
-        if done:
-            state, _ = env.reset()
-            done = False
+    states, actions, log_probs, rewards, dones, values = [], [], [], [], [], []
+    for ep in range(num_episodes):
+        length = int(batch.lengths[ep])
+        if length <= 0:
+            continue
 
-    # Compute next_value for the last state
-    if not dones[-1]:  # If the last episode didn't terminate
-        next_state_tensor = torch.FloatTensor(state).unsqueeze(0)
+        states.extend(batch.observations[ep, :length])
+        actions.extend(batch.actions[ep, :length])
+        rewards.extend(batch.rewards[ep, :length])
+        dones.extend(batch.dones[ep, :length])
+
+        for step_idx in range(length):
+            log_probs.append(torch.tensor([batch.log_probs[ep, step_idx]], dtype=torch.float32))
+            values.append(torch.tensor([batch.values[ep, step_idx]], dtype=torch.float32))
+
+    if states and not dones[-1]:
+        next_state_tensor = torch.from_numpy(states[-1]).float().unsqueeze(0)
         with torch.no_grad():
             _, _, _, next_value = model.get_action_and_value(next_state_tensor)
     else:
@@ -165,18 +164,20 @@ def train_ppo():
     Perform PPO update.
     Every 10 updates, evaluate on 10 episodes and print avg reward (for monitoring).
     """
-    print("Creating environment...")
-    env = gym.make(ENV_NAME)
-    env = FlattenObservation(env)  # Flatten dict observations
-    state_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.n
+    print("Creating environment and collector...")
+    collector = BatchedTetrisCollector(COLLECTOR_WORKERS, MAX_STEPS)
+    eval_env = FlattenObservation(gym.make(ENV_NAME))
+    state_dim = collector.obs_dim
+    action_dim = collector.action_space.n
     print(f"State dim: {state_dim}, Action dim: {action_dim}")
     model = ActorCritic(state_dim, action_dim, HIDDEN_SIZE)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     print("Starting training...")
 
     for update in range(NUM_UPDATES):
-        states_list, actions_list, log_probs_list, rewards_list, dones_list, values_list, next_value = collect_rollouts(env, model, MAX_STEPS)
+        states_list, actions_list, log_probs_list, rewards_list, dones_list, values_list, next_value = collect_rollouts(
+            collector, model, ROLLOUT_EPISODES
+        )
 
         advantages, returns = compute_advantages_and_returns(rewards_list, dones_list, values_list, next_value, GAMMA, LAMBDA)
 
@@ -188,13 +189,15 @@ def train_ppo():
             num_eval = 3 if update < 100 else 10
             eval_rewards = []
             for _ in range(num_eval):
-                state, _ = env.reset()
+                state, _ = eval_env.reset()
                 done = False
                 total_reward = 0
                 while not done:
                     state_tensor = torch.FloatTensor(state).unsqueeze(0)
                     action, _, _, _ = model.get_action_and_value(state_tensor)
-                    state, reward, done, _, _ = env.step(action.item())
+                    state, reward, done, _, _ = eval_env.step(action.item())
                     total_reward += reward
                 eval_rewards.append(total_reward)
             print(f"Update {update}/{NUM_UPDATES}: Avg reward = {np.mean(eval_rewards):.2f} (±{np.std(eval_rewards):.2f})")
+
+    collector.close()

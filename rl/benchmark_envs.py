@@ -1,20 +1,25 @@
-"""Benchmark script to compare TinyRL C++ engine vs Tetris-Gymnasium Python env."""
+"""Benchmark script to compare TinyRL engine variants vs Python envs."""
+import argparse
 import time
 import numpy as np
 import sys
 from pathlib import Path
 
-# Setup paths for both environments
+# Setup paths
 project_root = Path(__file__).parent.parent  # rl dir -> project root
 engine_lib = project_root / "engine" / "build" / "lib"
 sys.path.insert(0, str(engine_lib))
 
-# Add Tetris-Gymnasium to path
+rl_path = project_root / "rl"
+if rl_path.exists():
+    sys.path.insert(0, str(rl_path))
+
 tetris_gym_path = project_root / "Tetris-Gymnasium"
 if tetris_gym_path.exists():
     sys.path.insert(0, str(tetris_gym_path))
 
-def benchmark_tinyrl_env():
+
+def benchmark_tinyrl_env(num_steps: int):
     """Benchmark the TinyRL C++ Tetris engine."""
     print("\n" + "="*60)
     print("BENCHMARKING: TinyRL C++ Engine")
@@ -24,7 +29,6 @@ def benchmark_tinyrl_env():
 
     env = tinyrl_tetris.TetrisEnv(tinyrl_tetris.STEPPED, queue_size=3)
 
-    num_steps = 10000
     num_resets = 0
 
     start_time = time.time()
@@ -54,7 +58,7 @@ def benchmark_tinyrl_env():
         'steps_per_sec': steps_per_sec
     }
 
-def benchmark_gymnasium_env():
+def benchmark_gymnasium_env(num_steps: int):
     """Benchmark the Tetris-Gymnasium Python environment."""
     print("\n" + "="*60)
     print("BENCHMARKING: Tetris-Gymnasium Python")
@@ -67,7 +71,6 @@ def benchmark_gymnasium_env():
         # Try to create the environment
         env = gym.make('tetris_gymnasium/Tetris', render_mode=None)
 
-        num_steps = 10000
         num_resets = 0
 
         start_time = time.time()
@@ -92,8 +95,8 @@ def benchmark_gymnasium_env():
         env.close()
 
         return {
-            'name': 'Tetris-Gymnasium Python',
-            'steps': num_steps,
+        'name': 'Tetris-Gymnasium Python',
+        'steps': num_steps,
             'episodes': num_resets,
             'time': elapsed,
             'steps_per_sec': steps_per_sec
@@ -104,20 +107,17 @@ def benchmark_gymnasium_env():
         print("Make sure it's installed: pip install tetris-gymnasium")
         return None
 
-def benchmark_wrapped_tinyrl():
+def benchmark_wrapped_tinyrl(num_steps: int):
     """Benchmark TinyRL with Gymnasium wrapper."""
     print("\n" + "="*60)
     print("BENCHMARKING: TinyRL with Gymnasium Wrapper")
     print("="*60)
-
-    sys.path.insert(0, str(project_root / "rl"))
 
     import gymnasium as gym
     from src.env_wrapper import TetrisEnv
 
     env = TetrisEnv(queue_size=3)
 
-    num_steps = 10000
     num_resets = 0
 
     start_time = time.time()
@@ -146,6 +146,38 @@ def benchmark_wrapped_tinyrl():
         'time': elapsed,
         'steps_per_sec': steps_per_sec
     }
+
+def benchmark_batched_collector(num_workers: int, num_episodes: int, max_steps: int):
+    """Benchmark the multithreaded C++ BatchedTetrisCollector."""
+    print("\n" + "="*60)
+    print("BENCHMARKING: Batched C++ Collector")
+    print("="*60)
+
+    from src.batched_collector import BatchedTetrisCollector
+
+    collector = BatchedTetrisCollector(num_workers=num_workers, max_steps=max_steps)
+    start_time = time.time()
+    batch = collector.request_episodes(num_episodes)
+    collector.close()
+    elapsed = time.time() - start_time
+
+    total_steps = int(np.sum(batch.lengths))
+    steps_per_sec = total_steps / elapsed if elapsed > 0 else 0.0
+
+    print(f"Episodes requested: {num_episodes}")
+    print(f"Workers: {num_workers}")
+    print(f"Total env steps: {total_steps}")
+    print(f"Time: {elapsed:.3f}s")
+    print(f"Speed: {steps_per_sec:,.1f} steps/sec")
+
+    return {
+        'name': f'Batched Collector ({num_workers} workers)',
+        'steps': total_steps,
+        'episodes': num_episodes,
+        'time': elapsed,
+        'steps_per_sec': steps_per_sec
+    }
+
 
 def print_comparison(results):
     """Print comparison table."""
@@ -177,17 +209,35 @@ def print_comparison(results):
     print(f"🏆 Winner: {fastest['name']}")
     print(f"   Speed: {fastest['steps_per_sec']:,.1f} steps/sec")
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Benchmark TinyRL environment variants.")
+    parser.add_argument("--steps", type=int, default=10_000, help="Steps for single-env benchmarks.")
+    parser.add_argument("--batch-workers", type=int, default=4, help="Worker count for batched collector.")
+    parser.add_argument("--batch-episodes", type=int, default=8, help="Episodes requested per batched call.")
+    parser.add_argument("--batch-max-steps", type=int, default=512, help="Max steps per episode for batched collector.")
+    parser.add_argument("--skip-python", action="store_true", help="Skip Tetris-Gymnasium benchmark.")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
+
     print("="*60)
     print("Tetris Environment Performance Benchmark")
     print("="*60)
 
     results = []
 
-    # Benchmark all environments
-    results.append(benchmark_tinyrl_env())
-    results.append(benchmark_wrapped_tinyrl())
-    results.append(benchmark_gymnasium_env())
+    results.append(benchmark_tinyrl_env(args.steps))
+    results.append(benchmark_wrapped_tinyrl(args.steps))
 
-    # Print comparison
+    if not args.skip_python:
+        results.append(benchmark_gymnasium_env(args.steps))
+
+    results.append(benchmark_batched_collector(
+        num_workers=args.batch_workers,
+        num_episodes=args.batch_episodes,
+        max_steps=args.batch_max_steps,
+    ))
+
     print_comparison(results)
